@@ -5,6 +5,7 @@ import sneakers from "@/assets/sneakers.jpg.asset.json";
 import tshirt from "@/assets/tshirt.jpg.asset.json";
 import pants from "@/assets/pants.jpg.asset.json";
 import hoodie from "@/assets/hoodie.jpg.asset.json";
+import { fetchProducts } from "@/lib/products";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,6 +40,7 @@ type Lang = "uk" | "en";
 type Item = {
   id: string;
   img: string;
+  imgs?: string[];
   price: number;
   size: string;
   cond: string;
@@ -298,6 +300,26 @@ function Index() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [menu, setMenu] = useState(false);
   const [active, setActive] = useState<Item | null>(null);
+  const [items, setItems] = useState<Item[]>(ITEMS);
+  useEffect(() => {
+    fetchProducts()
+      .then((rows) => {
+        if (!rows.length) return;
+        setItems(
+          rows.map((r) => ({
+            id: r.id,
+            img: r.images[0] ?? "",
+            imgs: r.images,
+            price: r.price,
+            size: r.size,
+            cond: r.cond,
+            title: { uk: r.title_uk, en: r.title_en || r.title_uk },
+            desc: { uk: r.desc_uk, en: r.desc_en || r.desc_uk },
+          })),
+        );
+      })
+      .catch(() => {});
+  }, []);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const t = T[lang];
   useReveal();
@@ -452,7 +474,7 @@ function Index() {
             <p className="mt-3 text-muted-foreground">{t.catalogSub}</p>
           </div>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {ITEMS.map((it, i) => (
+            {items.map((it, i) => (
               <article
                 key={it.id}
                 className="reveal group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-primary/60"
@@ -598,7 +620,14 @@ function Index() {
           <div onClick={(e) => e.stopPropagation()} className="max-h-[92dvh] w-full max-w-3xl overflow-y-auto rounded-t-3xl border border-border bg-card sm:rounded-3xl">
             <div className="grid sm:grid-cols-2">
               <div className="relative aspect-[4/3] bg-muted sm:aspect-auto">
-                <img src={active.img} alt={active.title[lang]} className="h-full w-full object-cover" />
+                <div className="flex h-full w-full snap-x snap-mandatory overflow-x-auto">
+                  {(active.imgs ?? [active.img]).map((src) => (
+                    <img key={src} src={src} alt={active.title[lang]} className="h-full w-full shrink-0 snap-center object-cover" />
+                  ))}
+                </div>
+                {(active.imgs?.length ?? 1) > 1 && (
+                  <span className="absolute bottom-3 left-3 rounded-full bg-background/85 px-3 py-1 text-xs font-bold">← {active.imgs!.length} фото →</span>
+                )}
                 <button onClick={() => setActive(null)} aria-label={t.close} className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-background/85 sm:hidden">✕</button>
               </div>
               <div className="flex flex-col p-6">
